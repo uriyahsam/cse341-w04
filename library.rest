@@ -1,0 +1,149 @@
+### =============================================
+### CSE341 Week 03 — Library API REST Tests
+### Install "REST Client" extension in VSCode
+### Replace BASE_URL with your Render URL for production
+### =============================================
+
+@BASE_URL = http://localhost:3000
+### For production:
+### @BASE_URL = https://your-app-name.onrender.com
+
+### Replace these with real IDs after running seed.js
+@BOOK_ID = PASTE_REAL_BOOK_ID_HERE
+@AUTHOR_ID = PASTE_REAL_AUTHOR_ID_HERE
+
+
+### =============================================
+### BOOKS
+### =============================================
+
+### 1. GET ALL BOOKS
+GET {{BASE_URL}}/books
+Content-Type: application/json
+
+###
+
+### 2. GET SINGLE BOOK
+GET {{BASE_URL}}/books/{{BOOK_ID}}
+Content-Type: application/json
+
+###
+
+### 3. CREATE A BOOK (POST)
+POST {{BASE_URL}}/books
+Content-Type: application/json
+
+{
+  "title": "We Need New Names",
+  "author": "NoViolet Bulawayo",
+  "genre": "Coming-of-Age",
+  "publishedYear": 2013,
+  "isbn": "9780316230858",
+  "language": "English",
+  "pageCount": 297,
+  "availableCopies": 2,
+  "synopsis": "A story of a young girl growing up in Zimbabwe."
+}
+
+###
+
+### 4. CREATE — VALIDATION FAILURE TEST (missing fields)
+POST {{BASE_URL}}/books
+Content-Type: application/json
+
+{
+  "title": "Incomplete Book"
+}
+
+###
+
+### 5. UPDATE A BOOK (PUT)
+PUT {{BASE_URL}}/books/{{BOOK_ID}}
+Content-Type: application/json
+
+{
+  "title": "Things Fall Apart",
+  "author": "Chinua Achebe",
+  "genre": "Literary Fiction",
+  "publishedYear": 1958,
+  "isbn": "9780385474542",
+  "language": "English",
+  "pageCount": 209,
+  "availableCopies": 10,
+  "synopsis": "Updated: A story about pre-colonial life in Nigeria."
+}
+
+###
+
+### 6. DELETE A BOOK
+DELETE {{BASE_URL}}/books/{{BOOK_ID}}
+Content-Type: application/json
+
+###
+
+
+### =============================================
+### AUTHORS
+### =============================================
+
+### 7. GET ALL AUTHORS
+GET {{BASE_URL}}/authors
+Content-Type: application/json
+
+###
+
+### 8. GET SINGLE AUTHOR
+GET {{BASE_URL}}/authors/{{AUTHOR_ID}}
+Content-Type: application/json
+
+###
+
+### 9. CREATE AN AUTHOR (POST)
+POST {{BASE_URL}}/authors
+Content-Type: application/json
+
+{
+  "firstName": "Ngugi",
+  "lastName": "wa Thiongo",
+  "nationality": "Kenyan",
+  "birthYear": 1938,
+  "genre": "Political Fiction",
+  "email": "ngugi.thiongo@example.com",
+  "booksPublished": 30,
+  "biography": "Ngugi wa Thiong'o is a Kenyan author who writes primarily in Gikuyu."
+}
+
+###
+
+### 10. CREATE AUTHOR — VALIDATION FAILURE TEST
+POST {{BASE_URL}}/authors
+Content-Type: application/json
+
+{
+  "firstName": "Incomplete"
+}
+
+###
+
+### 11. UPDATE AN AUTHOR (PUT)
+PUT {{BASE_URL}}/authors/{{AUTHOR_ID}}
+Content-Type: application/json
+
+{
+  "firstName": "Chinua",
+  "lastName": "Achebe",
+  "nationality": "Nigerian",
+  "birthYear": 1930,
+  "genre": "Literary Fiction",
+  "email": "chinua.updated@example.com",
+  "booksPublished": 25,
+  "biography": "Updated biography for Chinua Achebe."
+}
+
+###
+
+### 12. DELETE AN AUTHOR
+DELETE {{BASE_URL}}/authors/{{AUTHOR_ID}}
+Content-Type: application/json
+
+###
