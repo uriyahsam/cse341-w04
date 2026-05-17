@@ -2,153 +2,116 @@
   "openapi": "3.0.0",
   "info": {
     "title": "CSE341 Library API",
-    "description": "A REST API for managing a Library database with Books and Authors collections. Built with Node.js, Express, and MongoDB.",
-    "version": "1.0.0",
-    "contact": {
-      "name": "Uriyah Sam"
-    }
+    "description": "REST API for Books and Authors. POST, PUT, DELETE require GitHub OAuth login.\n\n**To authenticate:**\n1. Open a new browser tab → navigate to `GET /auth/github` on your Render URL\n2. Authorize with GitHub → you will be redirected back logged in\n3. Return to `/api-docs` — protected routes now work for your session",
+    "version": "2.0.0",
+    "contact": { "name": "Uriyah Sam" }
   },
   "servers": [
-    {
-      "url": "https://cse341-w04.onrender.com",
-      "description": "Production server (Render)"
-    },
-    {
-      "url": "http://localhost:3000",
-      "description": "Local development server"
-    }
+    { "url": "https://cse341-w04.onrender.com", "description": "Production (Render)" },
+    { "url": "http://localhost:3000", "description": "Local" }
   ],
   "tags": [
-    { "name": "Books", "description": "Endpoints for managing books (9 fields)" },
-    { "name": "Authors", "description": "Endpoints for managing authors (8 fields)" }
+    { "name": "Auth",    "description": "GitHub OAuth — login, logout, status" },
+    { "name": "Books",   "description": "GET is public. POST / PUT / DELETE require login 🔒" },
+    { "name": "Authors", "description": "GET is public. POST / PUT / DELETE require login 🔒" }
   ],
   "paths": {
+    "/auth/github": {
+      "get": {
+        "summary": "Initiate GitHub OAuth login",
+        "description": "**Paste this URL into a browser tab** — do not use Swagger Try-It-Out here. GitHub will ask you to authorize. After approval you are redirected back and logged in.",
+        "tags": ["Auth"],
+        "responses": { "302": { "description": "Redirects to GitHub authorization page" } }
+      }
+    },
+    "/auth/github/callback": {
+      "get": {
+        "summary": "GitHub OAuth callback (automatic)",
+        "description": "GitHub calls this automatically. Do not call manually.",
+        "tags": ["Auth"],
+        "responses": {
+          "200": { "description": "Login successful", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginSuccess" } } } },
+          "302": { "description": "Redirects to /api-docs on failure" }
+        }
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "summary": "Check current login status",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "Auth status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthStatus" } } } } }
+      }
+    },
+    "/auth/logout": {
+      "get": {
+        "summary": "Log out and destroy session",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "Logged out", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Logged out successfully." } } } } } } }
+      }
+    },
     "/books": {
       "get": {
-        "summary": "Get all books",
-        "description": "Returns all book documents from the MongoDB books collection.",
+        "summary": "Get all books (public)",
         "tags": ["Books"],
         "responses": {
-          "200": {
-            "description": "Array of all books",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Book" } }
-              }
-            }
-          },
+          "200": { "description": "Array of books", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Book" } } } } },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       },
       "post": {
-        "summary": "Create a new book",
-        "description": "Creates a new book document. All required fields must be provided. Returns the new book's MongoDB ID.",
+        "summary": "🔒 Create a book (login required)",
+        "description": "Requires GitHub OAuth session. Log in via GET /auth/github first.",
         "tags": ["Books"],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/BookInput" },
-              "example": {
-                "title": "Things Fall Apart",
-                "author": "Chinua Achebe",
-                "genre": "Literary Fiction",
-                "publishedYear": 1958,
-                "isbn": "9780385474542",
-                "language": "English",
-                "pageCount": 209,
-                "availableCopies": 5,
-                "synopsis": "A story about pre-colonial life in Nigeria and the arrival of Europeans."
-              }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BookInput" },
+            "example": { "title": "Things Fall Apart", "author": "Chinua Achebe", "genre": "Literary Fiction", "publishedYear": 1958, "isbn": "9780385474542", "language": "English", "pageCount": 209, "availableCopies": 5, "synopsis": "A story about pre-colonial life in Nigeria." } } }
         },
         "responses": {
-          "201": {
-            "description": "Book created successfully. Returns the new ID.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": { "type": "string", "example": "64abc123def456789012345" }
-                  }
-                }
-              }
-            }
-          },
+          "201": { "description": "Created — returns new ID", "content": { "application/json": { "schema": { "type": "object", "properties": { "id": { "type": "string" } } } } } },
           "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       }
     },
     "/books/{id}": {
       "get": {
-        "summary": "Get a book by ID",
-        "description": "Returns a single book document by its MongoDB ObjectId.",
+        "summary": "Get a book by ID (public)",
         "tags": ["Books"],
         "parameters": [{ "$ref": "#/components/parameters/id" }],
         "responses": {
-          "200": {
-            "description": "The requested book",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/Book" } }
-            }
-          },
+          "200": { "description": "The book", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Book" } } } },
           "400": { "$ref": "#/components/responses/InvalidId" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       },
       "put": {
-        "summary": "Update a book by ID",
-        "description": "Replaces an existing book document. All required fields must be provided.",
+        "summary": "🔒 Update a book (login required)",
         "tags": ["Books"],
         "parameters": [{ "$ref": "#/components/parameters/id" }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/BookInput" },
-              "example": {
-                "title": "Things Fall Apart",
-                "author": "Chinua Achebe",
-                "genre": "Literary Fiction",
-                "publishedYear": 1958,
-                "isbn": "9780385474542",
-                "language": "English",
-                "pageCount": 209,
-                "availableCopies": 3,
-                "synopsis": "Updated synopsis."
-              }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BookInput" },
+            "example": { "title": "Things Fall Apart", "author": "Chinua Achebe", "genre": "Literary Fiction", "publishedYear": 1958, "isbn": "9780385474542", "language": "English", "pageCount": 209, "availableCopies": 3, "synopsis": "Updated." } } }
         },
         "responses": {
-          "204": { "description": "Book updated successfully (no content returned)" },
+          "204": { "description": "Updated (no content)" },
           "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       },
       "delete": {
-        "summary": "Delete a book by ID",
-        "description": "Deletes a book document by its MongoDB ObjectId.",
+        "summary": "🔒 Delete a book (login required)",
         "tags": ["Books"],
         "parameters": [{ "$ref": "#/components/parameters/id" }],
         "responses": {
-          "200": {
-            "description": "Book deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": { "message": { "type": "string", "example": "Book deleted successfully." } }
-                }
-              }
-            }
-          },
+          "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Book deleted successfully." } } } } } },
           "400": { "$ref": "#/components/responses/InvalidId" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
@@ -156,128 +119,66 @@
     },
     "/authors": {
       "get": {
-        "summary": "Get all authors",
-        "description": "Returns all author documents from the MongoDB authors collection.",
+        "summary": "Get all authors (public)",
         "tags": ["Authors"],
         "responses": {
-          "200": {
-            "description": "Array of all authors",
-            "content": {
-              "application/json": {
-                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Author" } }
-              }
-            }
-          },
+          "200": { "description": "Array of authors", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Author" } } } } },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       },
       "post": {
-        "summary": "Create a new author",
-        "description": "Creates a new author document. All required fields must be provided. Returns the new author's MongoDB ID.",
+        "summary": "🔒 Create an author (login required)",
         "tags": ["Authors"],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/AuthorInput" },
-              "example": {
-                "firstName": "Chinua",
-                "lastName": "Achebe",
-                "nationality": "Nigerian",
-                "birthYear": 1930,
-                "genre": "Literary Fiction",
-                "email": "chinua.achebe@example.com",
-                "booksPublished": 21,
-                "biography": "Chinua Achebe was a Nigerian novelist and poet."
-              }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthorInput" },
+            "example": { "firstName": "Chinua", "lastName": "Achebe", "nationality": "Nigerian", "birthYear": 1930, "genre": "Literary Fiction", "email": "chinua@example.com", "booksPublished": 21, "biography": "Nigerian novelist." } } }
         },
         "responses": {
-          "201": {
-            "description": "Author created successfully. Returns the new ID.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": { "type": "string", "example": "64abc123def456789012345" }
-                  }
-                }
-              }
-            }
-          },
+          "201": { "description": "Created — returns new ID", "content": { "application/json": { "schema": { "type": "object", "properties": { "id": { "type": "string" } } } } } },
           "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       }
     },
     "/authors/{id}": {
       "get": {
-        "summary": "Get an author by ID",
-        "description": "Returns a single author document by its MongoDB ObjectId.",
+        "summary": "Get an author by ID (public)",
         "tags": ["Authors"],
         "parameters": [{ "$ref": "#/components/parameters/id" }],
         "responses": {
-          "200": {
-            "description": "The requested author",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/Author" } }
-            }
-          },
+          "200": { "description": "The author", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Author" } } } },
           "400": { "$ref": "#/components/responses/InvalidId" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       },
       "put": {
-        "summary": "Update an author by ID",
-        "description": "Replaces an existing author document. All required fields must be provided.",
+        "summary": "🔒 Update an author (login required)",
         "tags": ["Authors"],
         "parameters": [{ "$ref": "#/components/parameters/id" }],
         "requestBody": {
           "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/AuthorInput" },
-              "example": {
-                "firstName": "Chinua",
-                "lastName": "Achebe",
-                "nationality": "Nigerian",
-                "birthYear": 1930,
-                "genre": "Literary Fiction",
-                "email": "updated@example.com",
-                "booksPublished": 22,
-                "biography": "Updated biography."
-              }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthorInput" },
+            "example": { "firstName": "Chinua", "lastName": "Achebe", "nationality": "Nigerian", "birthYear": 1930, "genre": "Literary Fiction", "email": "updated@example.com", "booksPublished": 22, "biography": "Updated." } } }
         },
         "responses": {
-          "204": { "description": "Author updated successfully (no content returned)" },
+          "204": { "description": "Updated (no content)" },
           "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
       },
       "delete": {
-        "summary": "Delete an author by ID",
-        "description": "Deletes an author document by its MongoDB ObjectId.",
+        "summary": "🔒 Delete an author (login required)",
         "tags": ["Authors"],
         "parameters": [{ "$ref": "#/components/parameters/id" }],
         "responses": {
-          "200": {
-            "description": "Author deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": { "message": { "type": "string", "example": "Author deleted successfully." } }
-                }
-              }
-            }
-          },
+          "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Author deleted successfully." } } } } } },
           "400": { "$ref": "#/components/responses/InvalidId" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
           "404": { "$ref": "#/components/responses/NotFound" },
           "500": { "$ref": "#/components/responses/ServerError" }
         }
@@ -287,128 +188,91 @@
   "components": {
     "parameters": {
       "id": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "MongoDB ObjectId (24-character hex string)",
+        "name": "id", "in": "path", "required": true,
+        "description": "MongoDB ObjectId (24-char hex)",
         "schema": { "type": "string", "example": "64abc123def456789012345" }
       }
     },
     "responses": {
+      "Unauthorized": {
+        "description": "Not logged in — visit GET /auth/github in browser first",
+        "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string", "example": "Unauthorized. Please log in first: visit GET /auth/github in your browser." } } } } }
+      },
       "ValidationError": {
-        "description": "Validation failed — required fields missing or invalid",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "error": { "type": "string", "example": "Validation failed." },
-                "details": {
-                  "type": "array",
-                  "items": { "type": "string" },
-                  "example": ["\"title\" is required.", "\"publishedYear\" must be a valid year."]
-                }
-              }
-            }
-          }
-        }
+        "description": "Validation failed",
+        "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string", "example": "Validation failed." }, "details": { "type": "array", "items": { "type": "string" }, "example": ["\"title\" is required."] } } } } }
       },
       "InvalidId": {
-        "description": "Invalid MongoDB ObjectId format",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": { "error": { "type": "string", "example": "Invalid ID format. Must be a 24-character hex string." } }
-            }
-          }
-        }
+        "description": "Invalid MongoDB ObjectId",
+        "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string", "example": "Invalid ID format. Must be a 24-character hex string." } } } } }
       },
       "NotFound": {
-        "description": "Document not found",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": { "error": { "type": "string", "example": "No book found with id: 64abc123def456789012345" } }
-            }
-          }
-        }
+        "description": "Not found",
+        "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string", "example": "No book found with id: 64abc123def456789012345" } } } } }
       },
       "ServerError": {
         "description": "Internal server error",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "error": { "type": "string", "example": "Failed to retrieve books." },
-                "details": { "type": "string", "example": "Connection timeout." }
-              }
-            }
-          }
-        }
+        "content": { "application/json": { "schema": { "type": "object", "properties": { "error": { "type": "string" }, "details": { "type": "string" } } } } }
       }
     },
     "schemas": {
+      "LoginSuccess": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string", "example": "Login successful." },
+          "user": { "type": "object", "properties": {
+            "id": { "type": "string" }, "displayName": { "type": "string", "example": "Uriyah Sam" },
+            "username": { "type": "string", "example": "uriyahsam" }, "profileUrl": { "type": "string" }
+          }}
+        }
+      },
+      "AuthStatus": {
+        "type": "object",
+        "properties": {
+          "loggedIn": { "type": "boolean", "example": true },
+          "user": { "type": "object", "properties": {
+            "id": { "type": "string" }, "displayName": { "type": "string" }, "username": { "type": "string" }
+          }}
+        }
+      },
       "Book": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string", "example": "64abc123def456789012345" },
-          "title": { "type": "string", "example": "Things Fall Apart" },
-          "author": { "type": "string", "example": "Chinua Achebe" },
-          "genre": { "type": "string", "example": "Literary Fiction" },
-          "publishedYear": { "type": "integer", "example": 1958 },
-          "isbn": { "type": "string", "example": "9780385474542" },
-          "language": { "type": "string", "example": "English" },
-          "pageCount": { "type": "integer", "example": 209 },
-          "availableCopies": { "type": "integer", "example": 5 },
-          "synopsis": { "type": "string", "example": "A story about pre-colonial life in Nigeria." },
+          "_id": { "type": "string" }, "title": { "type": "string", "example": "Things Fall Apart" },
+          "author": { "type": "string", "example": "Chinua Achebe" }, "genre": { "type": "string", "example": "Literary Fiction" },
+          "publishedYear": { "type": "integer", "example": 1958 }, "isbn": { "type": "string", "example": "9780385474542" },
+          "language": { "type": "string", "example": "English" }, "pageCount": { "type": "integer", "example": 209 },
+          "availableCopies": { "type": "integer", "example": 5 }, "synopsis": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" }
         }
       },
       "BookInput": {
         "type": "object",
-        "required": ["title", "author", "genre", "publishedYear", "isbn", "language", "pageCount", "availableCopies"],
+        "required": ["title","author","genre","publishedYear","isbn","language","pageCount","availableCopies"],
         "properties": {
-          "title": { "type": "string", "example": "Things Fall Apart" },
-          "author": { "type": "string", "example": "Chinua Achebe" },
-          "genre": { "type": "string", "example": "Literary Fiction" },
-          "publishedYear": { "type": "integer", "example": 1958 },
-          "isbn": { "type": "string", "description": "10 or 13 digit ISBN", "example": "9780385474542" },
-          "language": { "type": "string", "example": "English" },
-          "pageCount": { "type": "integer", "minimum": 1, "example": 209 },
-          "availableCopies": { "type": "integer", "minimum": 0, "example": 5 },
-          "synopsis": { "type": "string", "example": "Optional synopsis of the book." }
+          "title": { "type": "string" }, "author": { "type": "string" }, "genre": { "type": "string" },
+          "publishedYear": { "type": "integer", "example": 1958 }, "isbn": { "type": "string", "description": "10 or 13 digit ISBN" },
+          "language": { "type": "string" }, "pageCount": { "type": "integer", "minimum": 1 },
+          "availableCopies": { "type": "integer", "minimum": 0 }, "synopsis": { "type": "string" }
         }
       },
       "Author": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string", "example": "64abc123def456789012346" },
-          "firstName": { "type": "string", "example": "Chinua" },
-          "lastName": { "type": "string", "example": "Achebe" },
-          "nationality": { "type": "string", "example": "Nigerian" },
-          "birthYear": { "type": "integer", "example": 1930 },
-          "genre": { "type": "string", "example": "Literary Fiction" },
-          "email": { "type": "string", "format": "email", "example": "chinua@example.com" },
-          "booksPublished": { "type": "integer", "example": 21 },
-          "biography": { "type": "string", "example": "Nigerian novelist and poet." },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "_id": { "type": "string" }, "firstName": { "type": "string" }, "lastName": { "type": "string" },
+          "nationality": { "type": "string" }, "birthYear": { "type": "integer" }, "genre": { "type": "string" },
+          "email": { "type": "string", "format": "email" }, "booksPublished": { "type": "integer" },
+          "biography": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }
         }
       },
       "AuthorInput": {
         "type": "object",
-        "required": ["firstName", "lastName", "nationality", "birthYear", "genre", "email", "booksPublished"],
+        "required": ["firstName","lastName","nationality","birthYear","genre","email","booksPublished"],
         "properties": {
-          "firstName": { "type": "string", "example": "Chinua" },
-          "lastName": { "type": "string", "example": "Achebe" },
-          "nationality": { "type": "string", "example": "Nigerian" },
-          "birthYear": { "type": "integer", "example": 1930 },
-          "genre": { "type": "string", "example": "Literary Fiction" },
-          "email": { "type": "string", "format": "email", "example": "chinua@example.com" },
-          "booksPublished": { "type": "integer", "minimum": 0, "example": 21 },
-          "biography": { "type": "string", "example": "Optional biography." }
+          "firstName": { "type": "string" }, "lastName": { "type": "string" },
+          "nationality": { "type": "string" }, "birthYear": { "type": "integer" },
+          "genre": { "type": "string" }, "email": { "type": "string", "format": "email" },
+          "booksPublished": { "type": "integer", "minimum": 0 }, "biography": { "type": "string" }
         }
       }
     }
