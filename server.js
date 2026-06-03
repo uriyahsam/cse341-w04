@@ -5,12 +5,19 @@ const passport = require('./config/passport');
 const mongodb = require('./db/connect');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
+// CORS — must come first, allow credentials so session cookie passes through
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
+// Body parser
 app.use(express.json());
 
 // Session (must come before passport)
@@ -20,7 +27,11 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
-    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 hours
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24,
+      sameSite: 'none',   // required for cross-origin requests from Swagger UI
+      secure: true        // required when sameSite is 'none'
+    }
   })
 );
 
