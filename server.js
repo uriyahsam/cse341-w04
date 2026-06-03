@@ -11,7 +11,11 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// CORS — must come first, allow credentials so session cookie passes through
+// Trust Render's proxy so Express sees the real HTTPS protocol
+// (required for secure cookies to work on Render)
+app.set('trust proxy', 1);
+
+// CORS — allow credentials so the session cookie travels with requests
 app.use(cors({
   origin: true,
   credentials: true
@@ -20,7 +24,7 @@ app.use(cors({
 // Body parser
 app.use(express.json());
 
-// Session (must come before passport)
+// Session
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -29,8 +33,8 @@ app.use(
     store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
     cookie: {
       maxAge: 1000 * 60 * 60 * 24,
-      sameSite: 'none',   // required for cross-origin requests from Swagger UI
-      secure: true        // required when sameSite is 'none'
+      sameSite: 'none',
+      secure: true
     }
   })
 );
