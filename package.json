@@ -1,7 +1,7 @@
 {
-  "name": "cse341-w04-library",
-  "version": "2.0.0",
-  "description": "CSE341 Week 4 — Library API with GitHub OAuth",
+  "name": "cse341-w03-library",
+  "version": "1.0.0",
+  "description": "CSE341 Week 3 Project — Library API with Books and Authors collections",
   "license": "ISC",
   "author": "Uriyah Sam",
   "type": "commonjs",
