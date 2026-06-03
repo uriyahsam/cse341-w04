@@ -10,7 +10,7 @@
   },
   "servers": [
     {
-      "url": "https://cse341-w03-c4gu.onrender.com",
+      "url": "https://cse341-w04.onrender.com",
       "description": "Production server (Render)"
     },
     {
